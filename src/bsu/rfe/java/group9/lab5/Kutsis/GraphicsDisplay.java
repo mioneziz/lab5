@@ -6,6 +6,8 @@ import java.awt.Cursor;
 import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.geom.Ellipse2D;
+import java.awt.geom.GeneralPath;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionListener;
@@ -135,9 +137,50 @@ public class GraphicsDisplay extends JPanel {
         }
 
     }
+    protected Point2D.Double xyToPoint(double x, double y) {
+// Вычисляем смещение X от самой левой точки (minX)
+        double deltaX = x - minX;
+// Вычисляем смещение Y от точки верхней точки (maxY)
+        double deltaY = maxY - y;
+        return new Point2D.Double(deltaX*scaleX, deltaY*scaleY);
+    }
 
     private void paintMarkers(Graphics2D canvas) {
-        canvas.setStroke(this.markerStroke);
+      //  Шаг 1 - Установить специальное перо для черчения контуров маркеров
+        canvas.setStroke(markerStroke);
+// Выбрать красный цвета для контуров маркеров
+        canvas.setColor(Color.RED);
+// Выбрать красный цвет для закрашивания маркеров внутри
+        canvas.setPaint(Color.RED);
+// Шаг 2 - Организовать цикл по всем точкам графика
+        for (Double[] point: graphicsData) {
+// Инициализировать эллипс как объект для представления маркера
+            Ellipse2D.Double marker = new Ellipse2D.Double();
+/* Эллипс будет задаваться посредством указания координат
+его центра
+и угла прямоугольника, в который он вписан */
+// Центр - в точке (x,y)
+            Point2D.Double center = xyToPoint(point[0], point[1]);
+            GeneralPath triangle = new GeneralPath();
+            java.awt.geom.Point2D.Double cent = this.xyToPoint(point[0], point[1]);
+            triangle.moveTo(cent.getX(), cent.getY());
+            triangle.moveTo(triangle.getCurrentPoint().getX() + 5.0D, triangle.getCurrentPoint().getY() + 5.0D);
+            triangle.lineTo(triangle.getCurrentPoint().getX() - 10.0D, triangle.getCurrentPoint().getY());
+            triangle.moveTo(center.getX(), center.getY());
+            triangle.moveTo(triangle.getCurrentPoint().getX(), triangle.getCurrentPoint().getY() - 5.0D);
+            triangle.lineTo(triangle.getCurrentPoint().getX() - 5.0D, triangle.getCurrentPoint().getY()+10.0D);
+            triangle.moveTo(center.getX(), center.getY());
+            triangle.moveTo(triangle.getCurrentPoint().getX(), triangle.getCurrentPoint().getY() - 5.0D);
+            triangle.lineTo(triangle.getCurrentPoint().getX() + 5.0D, triangle.getCurrentPoint().getY()+10.0D);
+
+// Угол прямоугольника - отстоит на расстоянии (3,3)
+            Point2D.Double corner = shiftPoint(center, 3, 3);
+// Задать эллипс по центру и диагонали
+            marker.setFrameFromCenter(center, corner);
+            canvas.draw(triangle); // Начертить контур маркера
+            canvas.fill(triangle); // Залить внутреннюю область маркера
+        }
+      /*  canvas.setStroke(this.markerStroke);
         canvas.setColor(Color.RED);
         canvas.setPaint(Color.RED);
         java.awt.geom.Ellipse2D.Double lastMarker = null;
@@ -174,9 +217,9 @@ public class GraphicsDisplay extends JPanel {
             canvas.draw(lastMarker);
             canvas.fill(lastMarker);
         }
+*/
 
     }
-
     private void paintLabels(Graphics2D canvas) {
         canvas.setColor(Color.BLACK);
         canvas.setFont(this.labelsFont);
@@ -247,6 +290,7 @@ public class GraphicsDisplay extends JPanel {
         canvas.draw(new java.awt.geom.Line2D.Double(this.translateXYtoPoint(this.viewport[0][0], this.viewport[0][1]), this.translateXYtoPoint(this.viewport[1][0], this.viewport[0][1])));
     }
 
+
     private void paintAxis(Graphics2D canvas) {
         canvas.setStroke(this.axisStroke);
         canvas.setColor(Color.BLACK);
@@ -302,7 +346,14 @@ public class GraphicsDisplay extends JPanel {
             return -1;
         }
     }
-
+    protected Point2D.Double shiftPoint(Point2D.Double src, double deltaX,
+                                        double deltaY) {
+// Инициализировать новый экземпляр точки
+        Point2D.Double dest = new Point2D.Double();
+// Задать еѐ координаты как координаты существующей точки +заданные смещения
+        dest.setLocation(src.getX() + deltaX, src.getY() + deltaY);
+        return dest;
+    }
     public void reset() {
         this.displayGraphics(this.originalData);
     }
@@ -406,3 +457,4 @@ public class GraphicsDisplay extends JPanel {
         }
     }
 }
+
